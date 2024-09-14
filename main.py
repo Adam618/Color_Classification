@@ -34,7 +34,7 @@ parser.add_argument('--batch_size', default=128, type=int, help='batch size for 
 parser.add_argument('--epochs', default=50, type=int, help='number of epochs to train')
 
 # # 添加模型选择参数
-parser.add_argument('--model', default='shufflenetv2', type=str, help='choose model architecture')
+parser.add_argument('--model', default='mobilenetv3_small', type=str, help='choose model architecture')
 
 # Early stopping参数 没启用
 parser.add_argument('--early_stopping', action='store_false', help='enable early stopping')
@@ -60,11 +60,14 @@ start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 # Data
 print('==> Preparing data..')
 
-
+# H channel - Mean: 119.9792342818232, Std: 65.67394482744787
+# S channel - Mean: 38.328601581072874, Std: 40.98342964832585
+# V channel - Mean: 117.49553444651607, Std: 55.37812123384341
 transform_train = transforms.Compose([
     transforms.Resize((224, 224)),  # 调整图像大小
+    transforms.Lambda(lambda img: img.convert("HSV")),  # 转换为HSV
     transforms.RandomHorizontalFlip(),  # 随机水平翻转
-    transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.02),  # 颜色抖动
+    # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.02),  # 颜色抖动
     transforms.ToTensor(),  # 转换为Tensor
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),  # 标准化
 ])
@@ -72,6 +75,7 @@ transform_train = transforms.Compose([
 
 transform_test = transforms.Compose([
     transforms.Resize((224, 224)),  # 调整图像大小
+    transforms.Lambda(lambda img: img.convert("HSV")),  # 转换为HSV
     transforms.ToTensor(),  # 转换为Tensor
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
 ])
@@ -207,6 +211,7 @@ def custom_loss():
 writer.add_graph(net, examples_data.to(device))
 # criterion = nn.CrossEntropyLoss()
 criterion = custom_loss()
+# criterion = nn.CrossEntropyLoss(weight=class_weights)
 optimizer = optim.SGD(net.parameters(), lr=args.lr,
                      weight_decay=2e-4, momentum=0.9)
 # Training
